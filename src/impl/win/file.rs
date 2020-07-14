@@ -1,4 +1,4 @@
-use crate::{Dialog, Error, OpenMultipleFile, OpenSingleFile, Result};
+use crate::{Dialog, Error, OpenMultipleFile, OpenSingleFile, Result, SaveFile};
 use std::path::PathBuf;
 use wfd::{
     DialogError, DialogParams, OpenDialogResult, FOS_ALLOWMULTISELECT, FOS_FILEMUSTEXIST,
@@ -40,6 +40,44 @@ impl Dialog for OpenMultipleFile<'_> {
             }
             Ok(None) => Ok(vec![]),
             Err(e) => Err(e),
+        }
+    }
+}
+
+impl Dialog for SaveFile<'_> {
+    type Output = Option<String>;
+
+    fn show(self) -> Result<Self::Output> {
+        super::process_init();
+
+        let file_types: Vec<_> = self
+            .types
+            .iter()
+            .map(|ft| {
+                let ext: Vec<_> = ft.extensions.iter().map(|s| format!("*.{}", s)).collect();
+                (ft.description, ext.join(";"))
+            })
+            .collect();
+        let file_types = file_types.iter().map(|t| (t.0, t.1.as_str())).collect();
+
+        let params = DialogParams {
+            default_folder: self.dir.unwrap_or(""),
+            file_name: self.name,
+            file_types,
+            options: FOS_OVERWRITEPROMPT | FOS_PATHMUSTEXIST | FOS_NOREADONLYRETURN,
+            ..Default::default()
+        };
+
+        let result = wfd::save_dialog(params);
+
+        match result {
+            Ok(t) => Ok(Some(path_to_string(t.selected_file_path))),
+            Err(e) => match e {
+                DialogError::UserCancelled => Ok(None),
+                DialogError::HResultFailed { error_method, .. } => {
+                    Err(Error::ImplementationError(error_method))
+                }
+            },
         }
     }
 }
@@ -90,9 +128,4 @@ fn open_dialog(params: OpenDialogParams) -> Result<Option<OpenDialogResult>> {
             }
         },
     }
-}
-
-#[allow(dead_code)]
-fn save_dialog() {
-    let mut _options = FOS_OVERWRITEPROMPT | FOS_PATHMUSTEXIST | FOS_NOREADONLYRETURN;
 }

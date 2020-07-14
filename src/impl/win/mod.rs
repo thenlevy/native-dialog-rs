@@ -6,9 +6,11 @@ fn process_init() {
 
     static INIT: Once = Once::new();
 
-    INIT.call_once(|| unsafe {
+    INIT.call_once(|| {
         #[cfg(feature = "windows_dpi_awareness")]
-        winapi::um::winuser::SetProcessDPIAware();
+        unsafe {
+            winapi::um::winuser::SetProcessDPIAware();
+        }
     });
 }
 
