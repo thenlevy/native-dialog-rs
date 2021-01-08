@@ -57,7 +57,7 @@ pub trait INSSavePanel: INSObject {
     }
 
     fn run_modal(&self) -> Result<Id<NSURL>, NSInteger> {
-        let response: NSInteger = unsafe { super::with_activation(|| msg_send![self, runModal]) };
+        let response: NSInteger = unsafe { super::with_activation(|| msg_send![self, beginWithCompletionHandler]) };
         match response {
             1 => unsafe {
                 let urls = msg_send![self, URL];
